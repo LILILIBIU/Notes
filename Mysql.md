@@ -1,6 +1,6 @@
 # MySQL 体系
 
-![微信图片_20220307232508](image\微信图片_20220307232508.png)
+![微信图片_20220307232508](image/微信图片_20220307232508.png)
 
 ## Mysql引擎
 
@@ -30,7 +30,7 @@ XXX.ibd:   XXX代表的是表名,InnoDB引擎的**每张表**都会对应这样�
 
 InnoDB逻辑存储结构
 
-![微信图片_20220307234550](image\微信图片_20220307234550.png)
+![微信图片_20220307234550](image/微信图片_20220307234550.png)
 TableSpece：表空间
 Segment：段
 Extent：区
@@ -65,7 +65,7 @@ Memory引擎的表数据是存储在内存中的，由于受到硬件问题、�
 
 ### 各大引擎特点及区别
 
-![微信图片_20220307235843](image\微信图片_20220307235843.png)
+![微信图片_20220307235843](image/微信图片_20220307235843.png)
 
 **存储引擎适用场景：**
 
@@ -158,7 +158,7 @@ drop index idx_user_email on user;
 
 以一颗最大度数(max-degree)为5(5阶)的B-Tree为例(每个节点最多存储4个key, 5个指针):
 
- ![image-20220308005236140](image\image-20220308005236140.png)
+ ![image-20220308005236140](image/image-20220308005236140.png)
 
 								- |->树的度数指一个节点的子节点数。
 
@@ -174,7 +174,7 @@ drop index idx_user_email on user;
 
 ​		MySQL索引数据结构对经典的B+Tree进行了优化。在原B+Tree的基础上,增加一个指向相邻叶子节点的链表指针,就形成了带有顺序指针的B+Tree,提高区间访问的性能。
 
-![image-20220308010929009](image\image-20220308010651212.png)
+![image-20220308010929009](image/image-20220308010651212.png)
 
 #### Hash
 
@@ -188,7 +188,7 @@ drop index idx_user_email on user;
 
 ​		**在Mysql中,支持Hash索引的是Memory引擎，而InnoDB中具有自适应Hash功能,Hash索引是存储引擎根据B+Tree索引在指定条件下自动构建的。** 
 
-## 为什么InnoDB存储引擎选择使用B+tree索引结构?
+### 为什么InnoDB存储引擎选择使用B+tree索引结构?
 
 1. 相对于二叉树,层级更少,搜索效率高;
 2. 对于B-tree,无论是叶子节点还是非叶子节点,都会保存数据,这样导致页中存储的键值减少,指针跟着减少,要同样保存	大量数据,只能增加树的高度,导致性能降低; 
@@ -207,5 +207,65 @@ drop index idx_user_email on user;
 - 如果不存在主键,将使用第一个唯一(UNIQUE)索引作为聚集索引。
 - 如果表没有主键,或没有合适的唯一索引,则InnoDB会自动生成一个rowid作为隐藏的聚集索引。
 
-![image-20220308012646721](image\image-20220308012646721.png)
+![image-20220308012646721](image/image-20220308012646721.png)
+
+## SQL性能分析
+
+建立索引的时机主要取决于这张表的各种操作频率，如果以增删为主则索引优化效果不大，如果进行改查，则有必要编制索引。
+
+``` sql
+#查看表内各个操作调用次数
+#全局查看
+show global status like'com_______';
+#本会话查看
+show session status like 'com_______';
+#(7个下划线，类如com_insert,com_select,com_update,delete)
+```
+
+### **慢查询分析**
+
+
+
+慢查询日志记录了所有执行时间超过指定参数(long_query_time,单位:秒,默认10秒)的所有SQL语句的日志。
+
+``` sql
+#查询慢查询日志记录开关
+show variables like 'slow_query_log';
+```
+
+MySQL的慢查询日志默认没有开启,需要在MySQL的配置文件(/etc/my.cnf)中配置如下信息: 
+
+
+``` conf
+#在config配置文件开启MySQL慢日志查询开关
+slow_query_log=1
+#设置慢日志的时间为2秒, SQL语句执行时间超过2秒,就会视为慢查询,记录慢查询日志
+long_query_time=2
+```
+
+配置完毕之后,通过以下指令重新启动MySQL服务器进行测试,查看慢日志文件中记录的信息/var/lib/mysql/localhost-slow.log 
+
+### profile
+
+```sql
+#查看该数据库是否支持profile
+select @@have_profiling ;
+#默认profile关闭
+select @@profiling
+#开启profile
+set profiling = 1;
+```
+
+**profile细化操作**
+
+```sql
+#查看当前会话每一条SQL执行耗时情况
+show profiles;
+#查看指定query_id的SQL语句各个阶段耗时情况
+show profile for query query_id;
+#查看致电给query_id的SQL语句CPU的使用情况
+show profile cpu for query query_id;
+```
+
+### explain执行计划
 
